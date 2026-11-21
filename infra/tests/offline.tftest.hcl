@@ -39,8 +39,8 @@ run "private_storage_and_cluster" {
     error_message = "Separate public, worker, and database subnets are required in two AZs."
   }
   assert {
-    condition     = aws_eks_node_group.library.scaling_config[0].max_size == 1 && aws_launch_template.nodes.credit_specification[0].cpu_credits == "standard" && aws_dynamodb_table.books.read_capacity == 5 && aws_dynamodb_table.books.write_capacity == 5 && aws_dynamodb_table.copies.read_capacity == 5 && aws_dynamodb_table.copies.write_capacity == 5
-    error_message = "Trial sizing must retain one worker, standard CPU credits, and small provisioned tables."
+    condition     = aws_eks_node_group.library.scaling_config[0].max_size == 1 && aws_launch_template.nodes.credit_specification[0].cpu_credits == "standard" && aws_dynamodb_table.books.read_capacity == 50 && aws_dynamodb_table.books.write_capacity == 50 && aws_dynamodb_table.copies.read_capacity == 50 && aws_dynamodb_table.copies.write_capacity == 50
+    error_message = "Demo sizing must retain one worker, standard CPU credits, and capacity for sustained read-only load."
   }
   assert {
     condition     = aws_cloudwatch_log_group.analytics.retention_in_days == 7 && contains(aws_emr_cluster.analytics[0].applications, "AmazonCloudWatchAgent")

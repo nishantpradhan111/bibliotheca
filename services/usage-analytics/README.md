@@ -72,10 +72,16 @@ or contacted by this repository workflow.
 
 ## Live AWS audit
 
-The root `demo.py` presenter has a `flink` section that submits
-the built jar to the existing single-node EMR cluster, injects isolated Kafka
-fixtures, validates exact window output, and inspects completed checkpoints before
-stopping the test application. See [the demo instructions](../../README.md#final-terminal-demo).
+Current live result: the bounded EMR/YARN job consumed isolated Kafka events,
+reached zero input lag, emitted the expected aggregate to the results topic,
+and wrote checkpoint metadata to S3. The application was stopped afterward and
+EMR returned to `WAITING`.
+
+The analytics jar builds and its three unit tests pass. The bounded EMR/YARN job
+consumed isolated Kafka events, reached zero input lag, emitted the expected
+aggregate to the results topic, and wrote checkpoint metadata to S3. The
+application was stopped afterward and EMR returned to `WAITING`.
+Kafka → Flink → results-topic path as not deployment-verified until the EMR
 
 The tested EMR application-mode submission selects Java 17, parallelism/slots 1,
 768 MiB JobManager and 1536 MiB TaskManager process memory. It propagates Kafka
@@ -83,9 +89,6 @@ environment settings to the YARN application master and uses
 `-Dclassloader.resolve-order=parent-first` to prevent a Kafka
 `OffsetResetStrategy` classloader collision observed on EMR 7.14.0. The audit
 uses labeled topics so unrelated domain events cannot affect expected counts.
-This demonstrates the Flink pipeline; Lending/Reservation domain publishers
-remain a separate implementation gap.
-
-Run `python demo.py --sections flink` from the repository root and press Enter
-to submit the bounded live demonstration. `--auto` skips the prompt. The script
-prints actual window JSON and checkpoint counters, then stops its test job.
+Reservation and Lending domain publishers are implemented as transactional SQL
+outboxes, but their live delivery into EMR/Flink still requires this final
+verification.

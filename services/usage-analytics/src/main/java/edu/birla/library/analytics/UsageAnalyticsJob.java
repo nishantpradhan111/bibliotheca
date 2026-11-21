@@ -28,6 +28,7 @@ public class UsageAnalyticsJob {
     private static final long OUT_OF_ORDERNESS_SECONDS = 30L;
 
     public static void main(String[] args) throws Exception {
+        applyCommandLineConfiguration(args);
         String brokers = requiredEnvironment("KAFKA_BOOTSTRAP_SERVERS");
         String inputTopic = environmentOrDefault("KAFKA_INPUT_TOPIC", "library.events.v1");
         String resultsTopic = environmentOrDefault("KAFKA_RESULTS_TOPIC", "library.analytics.results.v1");
@@ -92,7 +93,7 @@ public class UsageAnalyticsJob {
     }
 
     private static Properties kafkaProperties() throws IOException {
-        String json = System.getenv("KAFKA_CLIENT_PROPERTIES");
+        String json = configurationValue("KAFKA_CLIENT_PROPERTIES");
         Properties properties = new Properties();
         if (json == null || json.isBlank()) {
             return properties;
@@ -108,7 +109,7 @@ public class UsageAnalyticsJob {
     }
 
     private static String requiredEnvironment(String name) {
-        String value = System.getenv(name);
+        String value = configurationValue(name);
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(name + " must be set");
         }
@@ -116,8 +117,36 @@ public class UsageAnalyticsJob {
     }
 
     private static String environmentOrDefault(String name, String fallback) {
-        String value = System.getenv(name);
+        String value = configurationValue(name);
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    /**
+     * Supports both normal environment variables and Flink/YARN JVM properties.
+     * The latter keeps the job configurable when the YARN launcher does not
+     * propagate client-shell environment variables to task managers.
+     */
+    private static String configurationValue(String name) {
+        String environment = System.getenv(name);
+        if (environment != null && !environment.isBlank()) {
+            return environment;
+        }
+        return System.getProperty(name);
+    }
+
+    /** Accepts --KAFKA_* values so EMR command-runner can configure the job. */
+    private static void applyCommandLineConfiguration(String[] args) {
+        for (String arg : args) {
+            if (!arg.startsWith("--KAFKA_") || !arg.contains("=")) {
+                continue;
+            }
+            int separator = arg.indexOf('=');
+            String name = arg.substring(2, separator);
+            String value = arg.substring(separator + 1);
+            if (!value.isBlank()) {
+                System.setProperty(name, value);
+            }
+        }
     }
 
     private static class EventAggregate

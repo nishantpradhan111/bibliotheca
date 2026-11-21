@@ -43,12 +43,12 @@ resource "aws_db_instance" "member" {
   auto_minor_version_upgrade  = true
 }
 
-# Stores book metadata with a small provisioned development capacity.
+# Stores book metadata with capacity sized for the sustained demo load.
 resource "aws_dynamodb_table" "books" {
   name                        = "${local.name}-Books"
   billing_mode                = "PROVISIONED"
-  read_capacity               = 5
-  write_capacity              = 5
+  read_capacity               = 50
+  write_capacity              = 50
   hash_key                    = "book_id"
   deletion_protection_enabled = var.protect_data
   attribute {
@@ -64,8 +64,8 @@ resource "aws_dynamodb_table" "books" {
 resource "aws_dynamodb_table" "copies" {
   name                        = "${local.name}-Copies"
   billing_mode                = "PROVISIONED"
-  read_capacity               = 5
-  write_capacity              = 5
+  read_capacity               = 50
+  write_capacity              = 50
   hash_key                    = "copy_id"
   deletion_protection_enabled = var.protect_data
   attribute {
@@ -80,8 +80,8 @@ resource "aws_dynamodb_table" "copies" {
     name            = "book_id-index"
     hash_key        = "book_id"
     projection_type = "ALL"
-    read_capacity   = 5
-    write_capacity  = 5
+    read_capacity   = 50
+    write_capacity  = 50
   }
   server_side_encryption {
     enabled = true

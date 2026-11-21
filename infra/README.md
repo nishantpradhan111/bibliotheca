@@ -1,12 +1,10 @@
 # AWS infrastructure
 
-Terraform defines AWS infrastructure for this application. A read-only
-inventory on 19 November 2026 found an active EKS cluster, a waiting EMR cluster,
-an available RDS instance, DynamoDB tables, and ECR repositories in `us-east-1`.
-No matching infrastructure was found in `ap-south-1`. Kubernetes workload health
-is not verified. Reconcile this infrastructure with Terraform state before any
-plan or apply; the report in [FINAL_VERIFICATION.md](../FINAL_VERIFICATION.md)
-is historical evidence only.
+Terraform defines AWS infrastructure for this application. The current target is
+account `072718160501`, region `us-east-1`, with an ACTIVE EKS cluster,
+available storage services, ECR repositories, and an active ALB. Reconcile the
+existing resources with Terraform state before any plan or apply; no Terraform
+apply is implied by the live Kubernetes evidence.
 
 ## Resource ownership
 
@@ -34,7 +32,9 @@ The EMR CloudWatch bootstrap/application settings may require replacing the
 existing EMR cluster. Review the plan and the demo window before allowing that
 replacement.
 
-The target uses RDS PostgreSQL, DynamoDB and S3. Choose a globally unique bucket
+The target uses RDS PostgreSQL, DynamoDB and S3. Books and Copies are provisioned
+at 50 read/50 write units, including the `book_id-index`, which is the capacity
+used by the passing 40-VU demo. Choose a globally unique bucket
 name for the target account; never assume the example or a previous account's
 bucket exists. The bucket stores private covers and analytics artifacts,
 checkpoints, and logs under separate prefixes.
@@ -83,8 +83,13 @@ terraform validate -no-color
 terraform test '-filter=tests\offline.tftest.hcl' -no-color
 ```
 
-The tests use mocked providers and are not proof of a real deployment. The live
-demo separately tests actual services, storage, streaming and autoscaling.
+`fmt` passes. `validate` and the mocked test run remain blocked on this Windows
+workstation because both the AWS and archive provider binaries fail the
+Terraform plugin schema handshake, even after refreshing the generated provider
+cache. The tests use mocked providers and are not proof of a real deployment.
+The live demo separately verified actual services, storage, streaming, and
+autoscaling; the bounded EMR/YARN Flink job produced results and checkpoint
+metadata before cleanup.
 Application/image preparation, database bootstrap and Argo CD deployment are
 covered in [k8s/README.md](../k8s/README.md). Image publishing does not run a
 Terraform apply or launch the Flink job.

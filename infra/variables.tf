@@ -1,7 +1,7 @@
 variable "aws_region" {
   type        = string
   description = "Deployment region; only used during separately approved AWS work."
-  default     = "ap-south-1"
+  default     = "us-east-1"
 }
 
 variable "aws_account_id" {
@@ -26,7 +26,7 @@ variable "environment" {
 variable "availability_zones" {
   type        = list(string)
   description = "Exactly two AZs in the selected region; verify account availability before deployment."
-  default     = ["ap-south-1a", "ap-south-1b"]
+  default     = ["us-east-1a", "us-east-1b"]
   validation {
     condition = length(var.availability_zones) == 2 && length(distinct(var.availability_zones)) == 2 && alltrue([
       for zone in var.availability_zones : startswith(zone, var.aws_region)

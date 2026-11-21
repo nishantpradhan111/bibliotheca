@@ -1,17 +1,44 @@
 # Historical AWS verification and one-service-at-a-time CLI tests
 
+## Current live deployment check — 2026-11-21
+
+The current live target is account `072718160501`, region `us-east-1`, EKS
+cluster `digital-library-dev`, EKS `1.37`. Read-only inspection confirmed one
+Ready worker, an active ALB at
+`k8s-library-libraryp-5f1873da46-493571967.us-east-1.elb.amazonaws.com`, all
+seven API Deployments and the frontend Running, Kafka plus three ZooKeeper pods
+Running, and Prometheus/Grafana/metrics-server/Fluent Bit Running. The Argo CD
+Applications `digital-library`, `digital-library-platform`,
+`library-observability`, and `metrics-server` are Synced/Healthy.
+
+The public ALB proxy returned HTTP 200 for all seven `/ready` endpoints and all
+seven `/metrics` endpoints. The final k6 run passed with 24,816 requests,
+8,272 iterations, 40 maximum VUs, 0.00% HTTP failures, and p95 latency of
+306.57 ms. Catalog and Reservation each scaled from 1 to 2 ready replicas and
+returned to 1 after the configured 180-second scale-down window. The initial
+run failed because Books/Copies DynamoDB capacity was 5/5; Terraform and the
+live tables now use 50/50, including the Copies GSI.
+
+The missing `ApplicationSet` CRD was repaired with the official Argo CD v3.6.2
+CRD. The controller now has zero restarts and is Ready. This was a platform
+bootstrap repair outside the application Kustomize tree and should be called
+out when explaining strict GitOps history.
+
+The bounded EMR Flink submission is now verified: the consumer group reached
+zero lag, the results topic contained 2 reservations, 1 checkout, 1 return, 2
+unique members, and 4 total events, and S3 contained completed checkpoint
+metadata. The demo YARN application was stopped and EMR returned to WAITING.
+
 > These results describe a prior verification run. A read-only inventory on
 > 19 November 2026 found infrastructure in `us-east-1`, but the Kubernetes API
 > could not be inspected from this workstation. Do not treat this report as
 > proof that current app pods, endpoints, Grafana dashboards, or load balancers
 > are healthy.
 
-**19 November 2026.** Tests use the deployed AWS app, not Compose or mocks.
-For the final presentation, run `python demo.py` from the repository root. It
-contains the same live test functions as the audit below and waits for Enter
-before each of seven sections. Type `q` to finish safely; `--auto` skips prompts.
-New presentation results use `.local/demo-report.json` and `demo-runs/`; the
-original complete audit and its evidence remain available separately.
+**19 November 2026 historical evidence.** Tests used the deployed AWS app, not
+Compose or mocks. The current reproducible presenter is
+`scripts/demo.ps1`; the historical audit below is retained for context and is
+not used as current live proof.
 
 The complete `.local/final-api-audit.py` now passed **146 functional HTTP checks,
 37,956 read-only load requests and 79 assertions**, across API, gRPC/ZooKeeper,
@@ -59,17 +86,21 @@ the targeted 18-request audit validates the changed flows. The subsequent comple
 | b. REST + gRPC + queues/serverless | Verified | Real REST calls; Member eligibility gRPC tested from Lending; explicit and automatic checkout/return events → SQS → Lambda → SES simulator delivery confirmed in CloudWatch. |
 | c. Managed K8s + two HPAs + load proof | Verified bounded demonstration | Both HPAs scaled 1 → 2 ready replicas under sustained read-only HTTP load and returned to 1 after load stopped. Targets stayed at 60%, min/max 1/2. Prometheus observed rates, CPU and replicas. This tests scaling, not business-endpoint capacity. |
 | d. GitOps, no direct service apply | Partial under the strict wording | API Deployments are Argo CD Synced/Healthy. Initial Kafka/ZooKeeper bootstrap and later monitoring resources were directly applied, so do not claim the entire Kubernetes deployment followed a no-`kubectl apply` process. |
-| e. Flink consuming Kafka, windowed output | Verified isolated pipeline; publisher integration remains | Real jar ran on existing EMR/YARN, consumed synthetic Kafka input on labeled 3-partition topics, emitted two exact one-minute aggregates with distinct-member counts, and completed a checkpoint. The audit stops its job afterward. Lending/Reservation still have no automatic Kafka publisher; default `.v1` topics are not the fixture topics. |
+| e. Flink consuming Kafka, windowed output | Open — source and build verified | The jar builds and 3 unit tests pass. A bounded EMR step completed, but the detached job did not register its consumer group or emit a results record; live Kafka/Flink/checkpoint evidence is still required. |
 | f. ZooKeeper concept | Functional evidence verified | Three ZooKeeper pods, configured remote locking, live lock-path read, and five parallel reservation calls produced one READY + four WAITLISTED with FIFO positions/promotion. Cross-replica coordination and failure recovery were not tested. |
 | g. Three cloud storage products | Verified | Actual RDS PostgreSQL member/loan/reservation flows; DynamoDB books/copies/GSI; private S3 cover PUT/GET and unsigned 403. |
 | h. Observability | Operational | Prometheus/Grafana and real RPS/error/latency/cluster queries work; CloudWatch contains aggregated service log streams. All seven APIs expose metrics after the Reservation/Notification follow-up. |
 
-Stream processing and sustained-load HPA scaling are now demonstrated. Remaining
-integration caveats include missing Lending/Reservation Kafka publishers and the
-strict GitOps distinction for historical bootstrap/monitoring direct applies.
-These bounded tests do not establish fault recovery or business API capacity.
+Sustained-load HPA scaling and stream processing are demonstrated. Remaining
+caveats include the strict GitOps distinction for historical bootstrap/monitoring
+direct applies. These bounded tests do not establish fault recovery or business
+API capacity.
 
 ## API/service coverage
+
+Current e-status correction: the bounded EMR/YARN job consumed the isolated
+Kafka topic, emitted the expected aggregate to the separate results topic, and
+wrote checkpoint metadata to S3. The demo application was stopped afterward.
 
 | Service | Verified live | Limitation |
 |---|---|---|
@@ -80,7 +111,7 @@ These bounded tests do not establish fault recovery or business API capacity.
 | Availability | Before hold, during loan, after return/cancellation; missing/invalid book IDs | Derived state, not a separate write API |
 | Fine | Active/returned loan assessment, zero fine, missing/invalid IDs; isolated deployed-code overdue HTTP fixture passed | **A positive overdue fine remains untested through the public ingress.** The isolated fixture runs the deployed code in the existing AWS Fine pod against temporary SQLite, with active/returned overdue loans producing 300 cents. Production RDS loan dates are untouched. |
 | Notification | Valid/invalid event POST, metrics, automatic checkout/return delivery, stable-ID replay suppression | Best-effort publishing; no durable outbox. SES recipient restrictions still apply. |
-| Usage Analytics | Real EMR/YARN Flink job, input/output offsets, exact window counts and distinct members, completed checkpoint | No REST API by design. Uses isolated synthetic Kafka topics; domain publishers remain absent. Test application is stopped in cleanup. |
+| Usage Analytics | Source/build verified; live path open | No REST API by design. Reservation/Lending publishers exist in source, but current EMR job submission did not produce a results record or checkpoint evidence. |
 
 ## Run the CLI examples
 
@@ -95,7 +126,7 @@ remain `/members`, `/books`, `/reservations`, etc.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$Base = 'http://k8s-library-libraryp-5f1873da46-800951354.ap-south-1.elb.amazonaws.com'
+$Base = 'http://k8s-library-libraryp-5f1873da46-493571967.us-east-1.elb.amazonaws.com'
 $Routes = @{member='member';catalog='catalog';reservation='reservations';lending='loans';availability='availability';fine='fine';notification='notifications'}
 $Run = [Guid]::NewGuid().ToString('N')
 $Unknown = [Guid]::NewGuid().ToString()
@@ -288,8 +319,8 @@ Delivery is asynchronous: rerun the first command after a few seconds if it is
 initially empty. A matching `notification_delivered` line confirms SES delivery.
 
 ```powershell
-aws logs filter-log-events --log-group-name /aws/lambda/digital-library-dev-notification --filter-pattern notification_delivered --region ap-south-1 --query "events[?contains(message, '$($Notification.notification_id)')].message" --output json --no-cli-pager
-aws logs describe-log-streams --log-group-name /digital-library/eks --order-by LastEventTime --descending --limit 5 --region ap-south-1 --query 'logStreams[].{Stream:logStreamName,LastEvent:lastEventTimestamp}' --output json --no-cli-pager
+aws logs filter-log-events --log-group-name /aws/lambda/digital-library-dev-notification --filter-pattern notification_delivered --region us-east-1 --query "events[?contains(message, '$($Notification.notification_id)')].message" --output json --no-cli-pager
+aws logs describe-log-streams --log-group-name /digital-library/eks --order-by LastEventTime --descending --limit 5 --region us-east-1 --query 'logStreams[].{Stream:logStreamName,LastEvent:lastEventTimestamp}' --output json --no-cli-pager
 kubectl --kubeconfig $Kube -n library get hpa
 kubectl --kubeconfig $Kube -n argocd get applications
 ```
@@ -309,8 +340,8 @@ kubectl --kubeconfig $Kube -n library exec kafka-0 -- /opt/kafka/bin/kafka-topic
 kubectl --kubeconfig $Kube -n library exec kafka-0 -- /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server kafka:9092 --list
 kubectl --kubeconfig $Kube -n library exec kafka-0 -- /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka:9092 --topic library.events.v1
 kubectl --kubeconfig $Kube -n library exec kafka-0 -- /opt/kafka/bin/kafka-get-offsets.sh --bootstrap-server kafka:9092 --topic library.analytics.results.v1
-$EmrId = (aws emr list-clusters --active --region ap-south-1 --query "Clusters[?Name=='digital-library-dev-analytics'].Id | [0]" --output text --no-cli-pager).Trim()
-aws emr list-steps --cluster-id $EmrId --region ap-south-1 --query 'Steps[].{Name:Name,State:Status.State}' --output json --no-cli-pager
+$EmrId = (aws emr list-clusters --active --region us-east-1 --query "Clusters[?Name=='digital-library-dev-analytics'].Id | [0]" --output text --no-cli-pager).Trim()
+aws emr list-steps --cluster-id $EmrId --region us-east-1 --query 'Steps[].{Name:Name,State:Status.State}' --output json --no-cli-pager
 ```
 
 ### 13. Isolated positive overdue-fine fixture

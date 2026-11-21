@@ -1,16 +1,19 @@
 # Kubernetes deployment and GitOps
 
-The application namespace is `library`. A read-only AWS inventory found an
-active cluster named `digital-library-dev` in `us-east-1`, while the assignment
-documents name `ap-south-1`. The Kubernetes API could not be inspected from this
-workstation, so app health and Argo CD sync state remain unknown. The manifests
-currently track `deploy/deploy-20261118203335`:
+The application namespace is `library`. The live cluster is
+`digital-library-dev` in `us-east-1`; its public ALB is
+`k8s-library-libraryp-5f1873da46-493571967.us-east-1.elb.amazonaws.com`.
+All application Deployments and platform workloads are currently Running, and
+the Argo Applications are Synced/Healthy. The manifests currently track `main`:
 
 - `argocd/application.yaml`: application Kustomize path `k8s`.
 - `argocd/platform.yaml`: platform path `k8s/platform`.
 
 API updates use Git commits and Argo reconciliation. Historical Kafka/ZooKeeper
 bootstrap and monitoring direct applies remain a strict GitOps caveat. The
+missing Argo ApplicationSet CRD was repaired using the official Argo CD v3.6.2
+definition; the controller is now Ready with zero restarts. Disclose this
+platform bootstrap repair when presenting strict GitOps history. The
 platform tree now creates the AWS Load Balancer Controller service account and
 an Argo CD child Application for the pinned Helm chart; the target ALB is
 created from the Ingress after the controller is healthy. The ALB routes `/` to
@@ -93,5 +96,6 @@ kubectl kustomize k8s
 kubectl kustomize k8s/platform
 ```
 
-For live validation run `python demo.py` from the repository root. Full evidence
-and caveats are in [FINAL_VERIFICATION.md](../FINAL_VERIFICATION.md).
+For live validation run `powershell -ExecutionPolicy Bypass -File scripts/demo.ps1`
+from the repository root. Full evidence and caveats are in
+[FINAL_VERIFICATION.md](../FINAL_VERIFICATION.md).
