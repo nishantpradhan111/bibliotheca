@@ -18,6 +18,49 @@ repository root:
 powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
 ```
 
+To launch Grafana with a local port-forward and open the dashboard in your
+browser, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/launch-grafana.ps1
+```
+
+The dashboard opens at `http://127.0.0.1:13000/d/library-services-live`.
+The port-forward remains active after the launcher exits. Stop it with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/launch-grafana.ps1 -Stop
+```
+
+The launcher uses the repository kubeconfig and the temporary TLS workaround
+required by the current local environment. Remove the
+`--insecure-skip-tls-verify=true` argument from the script after the local EKS
+certificate trust issue is fixed.
+
+To run the read-only Reservation k6 load test, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-reservation-k6.ps1
+```
+
+The runner uses the documented fixture IDs by default. Override them when
+needed:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-reservation-k6.ps1 `
+  -BaseUrl "http://PUBLIC-ALB-DNS" `
+  -BookId "BOOK_UUID" `
+  -MemberId "MEMBER_UUID"
+```
+
+The runner starts Grafana at
+`http://127.0.0.1:13000/d/library-services-live` before k6 begins, so you can
+watch request rate, latency, errors, CPU, and HPA replica metrics during the
+load test. Use `-NoGrafana` if Grafana is already running or should not be
+opened.
+
+Use `-DryRun` to verify the setup without starting k6.
+
 It prints the actual API status codes, pod/container inventory, Ingress/ALB,
 HPAs, and Argo CD status. To run the sustained read-only load test, supply the
 isolated fixture IDs:

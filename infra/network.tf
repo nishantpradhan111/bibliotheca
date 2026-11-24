@@ -99,6 +99,7 @@ resource "aws_route_table" "database" {
   vpc_id = aws_vpc.library.id
 }
 
+# Associates the isolated database subnets with the database-only route table.
 resource "aws_route_table_association" "database" {
   for_each       = aws_subnet.database
   subnet_id      = each.value.id

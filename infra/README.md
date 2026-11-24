@@ -74,6 +74,22 @@ RDS requires a final snapshot on deletion. Terraform does not embed credentials.
 
 ## Local validation and deployment
 
+### Reading Terraform outputs
+
+Terraform outputs are stored in the local state file and are independent of a
+PowerShell session. From the repository root, use the helper below so the
+correct `infra` directory is selected automatically:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\terraform-output.ps1 eks
+powershell -ExecutionPolicy Bypass -File .\scripts\terraform-output.ps1 network
+powershell -ExecutionPolicy Bypass -File .\scripts\terraform-output.ps1 -Json catalog
+```
+
+The helper works after closing and reopening the terminal and from any current
+directory. It reads the state associated with this Terraform configuration; it
+does not apply changes or provision resources.
+
 From `infra`:
 
 ```powershell

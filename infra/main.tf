@@ -1,3 +1,4 @@
+# Pins Terraform and the AWS/archive providers used to define the deployment.
 terraform {
   required_version = ">= 1.9, < 2.0"
   required_providers {
@@ -12,6 +13,7 @@ terraform {
   }
 }
 
+# Configures AWS access, account safety checks, and common project tags.
 # validate and mocked tests do not configure this provider against AWS.
 # No backend is configured until the team agrees on state ownership.
 provider "aws" {
@@ -26,6 +28,7 @@ provider "aws" {
   }
 }
 
+# Builds shared names and maps the selected Availability Zones to subnet indexes.
 locals {
   name  = "digital-library-${var.environment}"
   zones = { for index, zone in var.availability_zones : zone => index }

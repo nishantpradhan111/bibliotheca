@@ -1,9 +1,11 @@
+# Selects the AWS region where the infrastructure is provisioned.
 variable "aws_region" {
   type        = string
   description = "Deployment region; only used during separately approved AWS work."
   default     = "us-east-1"
 }
 
+# Restricts Terraform operations to the intended AWS account.
 variable "aws_account_id" {
   type        = string
   description = "Expected AWS account; prevents an approved plan from targeting another account."
@@ -13,6 +15,7 @@ variable "aws_account_id" {
   }
 }
 
+# Adds the environment suffix to resource names and tags.
 variable "environment" {
   type        = string
   default     = "dev"
@@ -23,6 +26,7 @@ variable "environment" {
   }
 }
 
+# Selects the two Availability Zones used by the network and workloads.
 variable "availability_zones" {
   type        = list(string)
   description = "Exactly two AZs in the selected region; verify account availability before deployment."
@@ -35,6 +39,7 @@ variable "availability_zones" {
   }
 }
 
+# Selects the EKS Kubernetes control-plane version.
 variable "kubernetes_version" {
   type        = string
   description = "Explicit EKS version. Choose one in standard support at the AWS deployment review."
@@ -44,6 +49,7 @@ variable "kubernetes_version" {
   }
 }
 
+# Identifies the existing IAM principal granted EKS administrator access.
 variable "cluster_admin_principal_arn" {
   type        = string
   description = "Existing administrator IAM user or role ARN, not root or an STS session ARN."
@@ -53,6 +59,7 @@ variable "cluster_admin_principal_arn" {
   }
 }
 
+# Restricts public access to the EKS Kubernetes API endpoint.
 variable "eks_public_access_cidrs" {
   type        = list(string)
   description = "Explicit administrator/CI public IPv4 CIDRs for EKS API access. No all-internet access."
@@ -64,18 +71,21 @@ variable "eks_public_access_cidrs" {
   }
 }
 
+# Selects the EC2 instance type for the managed EKS worker group.
 variable "node_instance_type" {
   type        = string
   default     = "t3.xlarge"
   description = "Single x86 worker sized for APIs, Kafka, ZooKeeper, and observability in the demo."
 }
 
+# Selects the RDS PostgreSQL instance class.
 variable "db_instance_class" {
   type        = string
   default     = "db.t4g.micro"
   description = "Small development PostgreSQL instance, not a production sizing recommendation."
 }
 
+# Sets the globally unique private S3 bucket name for covers and analytics files.
 variable "cover_bucket_name" {
   type        = string
   description = "Globally unique, private cover bucket name."
@@ -85,24 +95,28 @@ variable "cover_bucket_name" {
   }
 }
 
+# Enables deletion protection for persistent database and table resources.
 variable "protect_data" {
   type        = bool
   default     = true
   description = "Deletion protection for RDS and DynamoDB. Changing this is a separately approved cloud mutation."
 }
 
+# Controls whether Terraform creates the optional EMR analytics cluster.
 variable "enable_analytics_cluster" {
   type        = bool
   default     = true
   description = "Keeps the assignment Flink cluster enabled; set false only in a reviewed cleanup plan."
 }
 
+# Controls whether the EMR analytics cluster is protected from termination.
 variable "emr_termination_protection" {
   type        = bool
   default     = true
   description = "Preserves the existing EMR protection; disable only in an approved cleanup plan."
 }
 
+# Sets the verified SES sender address used by notification delivery.
 variable "ses_sender" {
   type        = string
   description = "Verified SES sender identity used by the notification Lambda."

@@ -184,7 +184,7 @@ moved {
   to   = aws_emr_cluster.analytics[0]
 }
 
-# Makes the EMR EC2 role available to the cluster's primary instance.
+# Makes the EMR EC2 IAM role available to the cluster's primary instance.
 resource "aws_iam_instance_profile" "emr_ec2" {
   name = "${local.name}-emr-ec2"
   role = aws_iam_role.emr_ec2.name
