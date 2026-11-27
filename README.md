@@ -43,6 +43,18 @@ To run the read-only Reservation k6 load test, use:
 powershell -ExecutionPolicy Bypass -File .\scripts\run-reservation-k6.ps1
 ```
 
+To create a batch of catalog records through the public API and generate
+catalog CPU traffic for the HPA, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\catalog-api-load.ps1 `
+  -Count 50 `
+  -Concurrency 10
+```
+
+Each successful `POST /api/catalog/books` request creates one DynamoDB Books
+record. Adjust `-Count`, `-Concurrency`, and `-BaseUrl` for the demonstration.
+
 The runner uses the documented fixture IDs by default. Override them when
 needed:
 
